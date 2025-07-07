@@ -1,0 +1,147 @@
+========================================
+Haier AC Serial Protocol - Useful Reference
+========================================
+
+Derived from original Arduino/ESP8266 .ino implementation.
+
+--------------------------
+Serial Communication
+--------------------------
+- UART, 9600 baud (default)
+
+- Data frame length: 37 bytes
+- Byte indices for key parameters (zero-based):
+
+  #define B_CUR_TMP   13  // Current temperature
+  #define B_CMD       17  // 00=command, 7F=response
+  #define B_MODE      23  // 04=DRY, 01=COOL, 02=HEAT, 00=AUTO/SMART, 03=FAN
+  #define B_FAN_SPD   25  // 02=min, 01=mid, 00=max, 03=auto
+  #define B_SWING     27  // 01=up/down, 00=off, 02=left/right, 03=all
+  #define B_LOCK_REM  28  // 80=lock, 00=unlock
+  #define B_POWER     29  // 01=on, 00=off, 10/11=compressor, 09=quiet
+  #define B_FRESH     31  // 00=off, 01=on
+  #define B_SET_TMP   35  // Set temperature (add 16 for actual temp)
+
+--------------------------
+Frame Command Templates
+--------------------------
+- Status poll:
+  byte qstn[] = {255,255,10,0,0,0,0,0,1,1,77,1,90};
+
+- Power ON:
+  byte on[]   = {255,255,10,0,0,0,0,0,1,1,77,2,91};
+
+- Power OFF:
+  byte off[]  = {255,255,10,0,0,0,0,0,1,1,77,3,92};
+
+- Lock remote:
+  byte lock[] = {255,255,10,0,0,0,0,0,1,3,0,0,14};
+
+--------------------------
+Field Values (where applicable)
+--------------------------
+MODE (B_MODE)
+  00  smart/auto
+  01  cool
+  02  heat
+  03  fan
+  04  dry
+
+FAN SPEED (B_FAN_SPD)
+  00  max
+  01  mid
+  02  min
+  03  auto
+
+SWING (B_SWING)
+  00  off
+  01  up/down
+  02  left/right
+  03  all
+
+LOCK REMOTE (B_LOCK_REM)
+  00  off/unlocked
+  80  on/locked
+
+POWER (B_POWER)
+  00  off
+  01  on
+  09  quiet
+  10  compressor?
+  11  compressor?
+  00/10=off
+  01/11=on
+
+FRESH AIR (B_FRESH)
+  00  off
+  01  on
+
+SET TEMP (B_SET_TMP)
+  Value + 16 for actual temperature
+
+CUR TEMP (B_CUR_TMP)
+  Value = current temperature
+
+--------------------------
+Frame CRC Calculation
+--------------------------
+- CRC is a simple sum of bytes 2..(N-1) (excluding first 2 bytes)
+- Append CRC as last byte:
+  byte crc = 0;
+  for (int i=2; i < size; i++) {
+      crc += req[i];
+  }
+
+--------------------------
+Other Notes
+--------------------------
+- All frames begin with 0xFF,0xFF
+- When sending, send all bytes except CRC, then append calculated CRC
+- When receiving, last byte is CRC/check/checksum (can be used for deduplication or validation)
+
+- To convert Set Temperature:
+    set_temp = data[B_SET_TMP] + 16
+  To set:
+    data[B_SET_TMP] = (desired_temp - 16)
+
+- When changing state via command, always update relevant data[] bytes and send the frame with CRC
+
+--------------------------
+Example State Update Flow
+--------------------------
+- To set temperature:
+    data[B_SET_TMP] = (new_temp - 16)
+    // build frame
+    // send with calculated CRC
+
+- To set mode:
+    data[B_MODE] = mode_value
+    // e.g., 1 for cool, 2 for heat, etc.
+
+- To set fan speed:
+    data[B_FAN_SPD] = fan_value
+
+- To power ON:
+    send ON frame
+    // then send updated state frame (data[])
+
+- To power OFF:
+    send OFF frame
+
+--------------------------
+Unused/Stripped Items
+--------------------------
+- MQTT topics
+- WiFi setup
+- OTA functions
+- LED pin handling
+- Home Assistant/MQTT logic
+
+--------------------------
+Useful for:
+--------------------------
+- Porting to other platforms (ESPHome, Tasmota, etc.)
+- Reverse engineering other similar AC UART protocols
+- Reference for frame building/parsing
+
+========================================

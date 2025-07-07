@@ -1,0 +1,1 @@
+# Marker file for ESPHome external component package.

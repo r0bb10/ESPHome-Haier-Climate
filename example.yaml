@@ -1,0 +1,18 @@
+external_components:
+  - source:
+      type: git
+      url: https://github.com/r0bb10/esphome-haier-climate.git
+      ref: main
+    components: [haier_climate]
+
+uart:
+  id: ac_uart
+  tx_pin: GPIO1
+  rx_pin: GPIO3
+  baud_rate: 9600
+
+climate:
+  - platform: haier_climate
+    id: haier_ac
+    uart_id: ac_uart
+    name: "Haier AC"
